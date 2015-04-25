@@ -2,21 +2,56 @@
 
 'use strict';
 
-var db = new PouchDB('tabs');
+var BASE_URL = localStorage.baseUrl;
+
+var USERNAME = localStorage.username;
+var PASSWORD = localStorage.password;
+
+var tabs = new PouchDB('tabs');
 var events = new PouchDB('events');
 
-// var remoteDb = new PouchDB('http://beaugunderson.com:5984/beau-tabs');
+var pouchOptions = {skipSetup: true};
 
-// db.replicate.to(remoteDb, {
-//   live: true,
-//   retry: true
-// }).on('change', function (change) {
-//   console.log('change happened', change);
-// }).on('error', function (err) {
-//   console.log('replication error', err);
-// });
+var remoteTabs = new PouchDB(BASE_URL + '/' + USERNAME + '-tabs', pouchOptions);
+var remoteEvents = new PouchDB(BASE_URL + '/' + USERNAME + '-events',
+  pouchOptions);
 
-function addUpdate(windows, tabs, breakdown) {
+var ajaxOptions = {
+  ajax: {
+    headers: {
+      Authorization: 'Basic ' + window.btoa(USERNAME + ':' + PASSWORD)
+    }
+  }
+};
+
+remoteTabs.login(USERNAME, PASSWORD, ajaxOptions).then(function () {
+  tabs.replicate.to(remoteTabs, {
+    live: true,
+    retry: true
+  // }).on('change', function (change) {
+  //   console.log('change happened', change);
+  }).on('error', function (replicationError) {
+    console.log('replication error', replicationError);
+  });
+}).catch(function (loginError) {
+  console.log('login error', loginError);
+});
+
+remoteEvents.login(USERNAME, PASSWORD, ajaxOptions)
+  .then(function () {
+    events.replicate.to(remoteEvents, {
+      live: true,
+      retry: true
+    // }).on('change', function (change) {
+    //   console.log('change happened', change);
+    }).on('error', function (replicationError) {
+      console.log('replication error', replicationError);
+    });
+  }).catch(function (loginError) {
+    console.log('login error', loginError);
+  });
+
+function addUpdate(windowCount, tabCount, breakdown) {
   chrome.runtime.getPlatformInfo(function (info) {
     var updateTime = new Date().valueOf();
 
@@ -24,12 +59,12 @@ function addUpdate(windows, tabs, breakdown) {
       _id: String(updateTime),
       time: updateTime,
       tag: info.os + '-' + (localStorage.tag || 'unknown'),
-      windows: windows,
-      tabs: tabs,
+      windows: windowCount,
+      tabs: tabCount,
       breakdown: breakdown
     };
 
-    db.put(update);
+    tabs.put(update);
   });
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "Tab Statistics",
-  "version": "2.0",
+  "version": "3.0",
   "manifest_version": 2,
   "description": "Keep track of how many tabs you have open at any given time.",
 
@@ -24,6 +24,7 @@
     "persistent": false,
     "scripts": [
       "pouchdb-3.4.0.min.js",
+      "pouchdb.authentication.min.js",
       "tab-statistics.js"
     ]
   }
