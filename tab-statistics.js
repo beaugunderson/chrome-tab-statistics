@@ -2,43 +2,45 @@
 
 'use strict';
 
-var BASE_URL = localStorage.baseUrl;
-
-var USERNAME = localStorage.username;
-var PASSWORD = localStorage.password;
-
 var tabs = new PouchDB('tabs');
 var events = new PouchDB('events');
 
-var pouchOptions = {skipSetup: true};
+function startup() {
+  console.log('starting replication...');
 
-var remoteTabs = new PouchDB(BASE_URL + '/' + USERNAME + '-tabs', pouchOptions);
-var remoteEvents = new PouchDB(BASE_URL + '/' + USERNAME + '-events',
-  pouchOptions);
+  var BASE_URL = localStorage.baseUrl;
 
-var ajaxOptions = {
-  ajax: {
-    headers: {
-      Authorization: 'Basic ' + window.btoa(USERNAME + ':' + PASSWORD)
+  var USERNAME = localStorage.username;
+  var PASSWORD = localStorage.password;
+
+  var pouchOptions = {skipSetup: true};
+
+  var remoteTabs = new PouchDB(BASE_URL + '/' + USERNAME + '-tabs', pouchOptions);
+  var remoteEvents = new PouchDB(BASE_URL + '/' + USERNAME + '-events',
+    pouchOptions);
+
+  var ajaxOptions = {
+    ajax: {
+      headers: {
+        Authorization: 'Basic ' + window.btoa(USERNAME + ':' + PASSWORD)
+      }
     }
-  }
-};
+  };
 
-remoteTabs.login(USERNAME, PASSWORD, ajaxOptions).then(function () {
-  tabs.replicate.to(remoteTabs, {
-    live: true,
-    retry: true
-  // }).on('change', function (change) {
-  //   console.log('change happened', change);
-  }).on('error', function (replicationError) {
-    console.log('replication error', replicationError);
+  remoteTabs.login(USERNAME, PASSWORD, ajaxOptions).then(function () {
+    tabs.replicate.to(remoteTabs, {
+      live: true,
+      retry: true
+    // }).on('change', function (change) {
+    //   console.log('change happened', change);
+    }).on('error', function (replicationError) {
+      console.log('replication error', replicationError);
+    });
+  }).catch(function (loginError) {
+    console.log('login error', loginError);
   });
-}).catch(function (loginError) {
-  console.log('login error', loginError);
-});
 
-remoteEvents.login(USERNAME, PASSWORD, ajaxOptions)
-  .then(function () {
+  remoteEvents.login(USERNAME, PASSWORD, ajaxOptions).then(function () {
     events.replicate.to(remoteEvents, {
       live: true,
       retry: true
@@ -50,6 +52,7 @@ remoteEvents.login(USERNAME, PASSWORD, ajaxOptions)
   }).catch(function (loginError) {
     console.log('login error', loginError);
   });
+}
 
 function addUpdate(windowCount, tabCount, breakdown) {
   chrome.runtime.getPlatformInfo(function (info) {
@@ -114,6 +117,9 @@ chrome.alarms.onAlarm.addListener(function (alarm) {
 
   storeTabCount();
 });
+
+chrome.runtime.onStartup.addListener(startup);
+chrome.runtime.onInstalled.addListener(startup);
 
 chrome.tabs.onActivated.addListener(addEvent('tab-activated'));
 chrome.tabs.onAttached.addListener(addEvent('tab-attached'));
