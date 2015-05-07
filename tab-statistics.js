@@ -2,10 +2,7 @@
 
 'use strict';
 
-var tabs = new PouchDB('tabs');
-var events = new PouchDB('events');
-
-function startup() {
+function sync() {
   console.log('starting replication...');
 
   var BASE_URL = localStorage.baseUrl;
@@ -27,12 +24,14 @@ function startup() {
     }
   };
 
+  var tabs = new PouchDB('tabs');
+  var events = new PouchDB('events');
+
   remoteTabs.login(USERNAME, PASSWORD, ajaxOptions).then(function () {
     tabs.replicate.to(remoteTabs, {
-      live: true,
       retry: true
-    // }).on('change', function (change) {
-    //   console.log('change happened', change);
+    }).on('complete', function () {
+      console.log('sync complete');
     }).on('error', function (replicationError) {
       console.log('replication error', replicationError);
     });
@@ -42,10 +41,9 @@ function startup() {
 
   remoteEvents.login(USERNAME, PASSWORD, ajaxOptions).then(function () {
     events.replicate.to(remoteEvents, {
-      live: true,
       retry: true
-    // }).on('change', function (change) {
-    //   console.log('change happened', change);
+    }).on('complete', function () {
+      console.log('sync complete');
     }).on('error', function (replicationError) {
       console.log('replication error', replicationError);
     });
@@ -66,6 +64,8 @@ function addUpdate(windowCount, tabCount, breakdown) {
       tabs: tabCount,
       breakdown: breakdown
     };
+
+    var tabs = new PouchDB('tabs');
 
     tabs.put(update);
   });
@@ -103,23 +103,26 @@ function addEvent(type) {
         type: type
       };
 
+      var events = new PouchDB('events');
+
       events.put(update);
     });
   };
 }
 
 chrome.alarms.create('store-tab-count', {periodInMinutes: 5});
+chrome.alarms.create('sync-remote-couchdb', {periodInMinutes: 30});
 
 chrome.alarms.onAlarm.addListener(function (alarm) {
-  if (alarm.name !== 'store-tab-count') {
-    return;
+  if (alarm.name === 'store-tab-count') {
+    storeTabCount();
+  } else if (alarm.name === 'sync-remote-couchdb') {
+    sync();
   }
-
-  storeTabCount();
 });
 
-chrome.runtime.onStartup.addListener(startup);
-chrome.runtime.onInstalled.addListener(startup);
+// chrome.runtime.onStartup.addListener(startup);
+// chrome.runtime.onInstalled.addListener(startup);
 
 chrome.tabs.onActivated.addListener(addEvent('tab-activated'));
 chrome.tabs.onAttached.addListener(addEvent('tab-attached'));
