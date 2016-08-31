@@ -10,11 +10,10 @@ function sync() {
   var USERNAME = localStorage.username;
   var PASSWORD = localStorage.password;
 
-  var pouchOptions = {skipSetup: true};
+  var pouchOptions = {skip_setup: true};
 
   var remoteTabs = new PouchDB(BASE_URL + '/' + USERNAME + '-tabs', pouchOptions);
-  var remoteEvents = new PouchDB(BASE_URL + '/' + USERNAME + '-events',
-    pouchOptions);
+  var remoteEvents = new PouchDB(BASE_URL + '/' + USERNAME + '-events', pouchOptions);
 
   var ajaxOptions = {
     ajax: {
